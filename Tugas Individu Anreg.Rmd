@@ -1,0 +1,157 @@
+---
+title: "Tugas Individu Anreg"
+author: "Abdan"
+date: "2024-03-06"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+data <- read.csv ("C:\\Users\\ade\\Documents\\SEMESTER 4\\AnReg\\Tugas Individu Anreg.csv",sep = ";")
+data
+```
+
+```{r}
+Y <- data$Y
+X <- data$X
+```
+
+```{r}
+model <- lm(Y~X, data)
+summary (model)
+```
+
+**Eksplorasi Data**
+
+```{r}
+y.bar <- mean(Y)
+plot(X,Y)
+```
+
+Berdasarkan scatter plot yang tersedia, terjadi hubungan antara X dan Y yang tidak linear, hubungan antara X dan Y membentuk pola eksponensial
+
+**Uji Formal Normalitas**: Kolmogorov-Smirnov Uji ini memiliki hipotesis sebagai berikut: $H_0 : N$ (sisaan menyebar normal) $H_1 : N$ (sisaan tidak menyebar normal)
+
+```{r}
+library (nortest)
+sisaan_model <- resid(model)
+(norm_model <- lillie.test(sisaan_model))
+```
+
+```{r}
+ifelse(norm_model$p.value < 0.05, "sisaan tidak menyebar normal", "sisaan menyebar normal")
+```
+
+Nilai p-value \> bermakna tak tolak $H_0$. Hal ini menunjukan bahwa dalam taraf nyata 5% tidak cukup bukti untuk menyatakan sisaan tidak menyebar normal
+
+**Homogenitas**: Breusch-Pagan Uji ini memiliki hipotesis sebagai berikut: $H_0 : var[\epsilon] = \sigma^2I$ (Ragam Homogen) $H_1 : var[\epsilon] \not= \sigma^2I$ (Ragam tidak Homogen)
+
+```{r}
+library (lmtest)
+(homogen_model <- bptest(model))
+```
+
+```{r}
+ifelse(homogen_model$p.value < 0.05, "Ragam Tidak Homogen", "Ragam Homogen")
+```
+
+Nilai p-value \> 0,05 memiliki arti tak tolak H0. Dalam hal ini menunjukan bahwa dalam taraf nyata 5% tidak cukup bukti untuk menyatakan bahwa ragam sisaan tidak homogen.
+
+**Autokorelasi**
+
+```{r}
+dwtest (model)
+```
+
+```{r}
+acf (model$residuals)
+```
+
+Dalam grafik yang tersedia, autokorelasi pada lag 1 adalah 0.5 dan pada lag 2 adalah 0.4 yang mana kedua nilai tersebut melebihi batas kepercayaan 95%. Hal ini menunjukan bahwa autokorelasi pada lag 1 dan 2 mengalami signifikan. Tentunya, ini juga menandakan ketidakpenuhan asumsi Gauss-Markov khususnya asumsi non-autokorelasi. Hasil p-tes dari Uji Dorbin-Watson pun menunjukan nilai \< 0.05
+
+Penanganan Kondisi Tak Standar Transformasi Weighted Least Square
+
+```{r}
+A <- abs(model$residuals)
+B <- model$fitted.values
+fit <- lm(A ~ B, data)
+C <- 1 / fit$fitted.values^2
+C
+```
+
+```{r}
+plot(C)
+```
+
+```{r}
+model2 <- lm(Y~X, data1=data, weights = C)
+plot (model2)
+```
+
+```{r}
+summary (model2)
+```
+
+Penggunaan WLS belum dipastikan efektif disebabkan oleh asumsi Gauss-Markov yang belum memenuhi
+
+```{r}
+library (tidyverse)
+library (ggridges)
+library (GGally)
+library (plotly)
+library (dplyr)
+library (lmtest)
+library (stats)
+```
+
+```{r}
+data2 <- data %>%
+  mutate(y = sqrt (Y)) %>%
+  mutate(x = sqrt (X))
+model3 <- lm (y ~ X, data = data2)
+plot (x = data2$X, y = data2$y)
+```
+
+```{r}
+plot (model3)
+```
+
+```{r}
+summary (model3)
+```
+
+**UJI AUTOKORELASI MODEL REGRESI TRANSFORMASI**
+
+```{r}
+dwtest (model3)
+```
+
+```{r}
+model3 <- lm(y ~ x, data=data2)
+plot (x = data2$x, y = data2$y)
+```
+
+```{r}
+plot (model3)
+```
+
+```{r}
+summary (model3)
+```
+
+```{r}
+dwtest (model3)
+```
+
+Kesimpulan Nilai p \> 0.05 menunjukan bahwa tidak ada bukti yang cukup untuk menolak hipotesis nol yang menyatakan bahwa tidak ada autokorelasi. Berdasarkan transformasi tersebut dapat disimpulkan bahwa transformasi akar Y membuat persamaan regresi menjadi lebih efektif. Setelah ditransformasi, model regresi dinyatakan sebagai: $Y^* = 8.71245 - 0.81339X_1 + \epsilon$ $Y^* = \sqrt{Y}$ $X^* = \sqrt{X}$
+
+Setelah melakukan transformasi balik maka akan mendapatkan:
+
+$Y = (8.71245 - 0.81339X^{1/2})2 + \epsilon$
+
+Interpretasi model mengindikasikan bahwa Y memiliki hubungan terbalik dengan akar kuadrat dari X dengan hubungan yang bersifat kuadratik. Semakin besar nilai akar kuadrat dari X maka semakin kecil rata-rata nilai Y dengan tingkat penurunan yang meningkat.
+
+Puncak kurva menunjukan nilai rata-rata maksimum Y untuk nilai tertentu dari X. Dengan konstanta 8.71245 mewakili nilai Y ketika X = 0. Koefisien -0.81339 adalah koefisien regresi untuk variabel X. Nilai negatif mengindikasikan korelasi terbalik antara Y dan akar kuadrat dari X.
+
+Dapat disimpulkan, semakin besar akar kuadrat dari X maka semakin kecil nilai Y. Kuadrat pada koefisien regresi menunjukan bahwa korelasi antara Y dan X bersifat kuadratik. Dalam artian, perubahan Y tidak proporsional dengan perubahan X melainkan berubah dengan tingkat peningkatan yang semakin tinggi.
